@@ -1,5 +1,5 @@
-const SUPABASE_URL = ""; // ex.: https://xxxx.supabase.co
-const SUPABASE_ANON_KEY = ""; // chave anon pública
+const SUPABASE_URL = "https://pcfcryfdfvjpppbiogbv.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBjZmNyeWZkZnZqcHBwYmlvZ2J2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMyNzM1MjAsImV4cCI6MjA4ODg0OTUyMH0.4y7nyQY9a91wMxXOHnLZA79Ues6Fo2VkNS0iAwS1yRI"; // chave anon pública
 
 const STORAGE_KEY = "cookieManagerDataFallback";
 const LOW_STOCK_LIMIT = 5;
