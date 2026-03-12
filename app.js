@@ -1,37 +1,18 @@
-const STORAGE_KEY = "cookieManagerData";
+const SUPABASE_URL = ""; // ex.: https://xxxx.supabase.co
+const SUPABASE_ANON_KEY = ""; // chave anon pública
 
-const seedData = {
-  products: [
-    {
-      id: crypto.randomUUID(),
-      name: "Cookie Tradicional",
-      type: "Cookie",
-      flavor: "Chocolate",
-      price: 8,
-      stock: 30,
-    },
-    {
-      id: crypto.randomUUID(),
-      name: "Biscoito Manteiga",
-      type: "Biscoito",
-      flavor: "Baunilha",
-      price: 5,
-      stock: 45,
-    },
-  ],
-  sales: [],
-  ingredients: [],
-};
-
-const state = loadState();
+const STORAGE_KEY = "cookieManagerDataFallback";
+const LOW_STOCK_LIMIT = 5;
 
 const refs = {
+  syncStatus: document.getElementById("syncStatus"),
   productForm: document.getElementById("productForm"),
   ingredientForm: document.getElementById("ingredientForm"),
   saleForm: document.getElementById("saleForm"),
   saleDate: document.getElementById("saleDate"),
   ingredientDate: document.getElementById("ingredientDate"),
   saleProduct: document.getElementById("saleProduct"),
+  quickSaleList: document.getElementById("quickSaleList"),
   productTableBody: document.getElementById("productTableBody"),
   totalRevenue: document.getElementById("totalRevenue"),
   totalCost: document.getElementById("totalCost"),
@@ -39,94 +20,174 @@ const refs = {
   lowStockCount: document.getElementById("lowStockCount"),
 };
 
+const today = new Date().toISOString().split("T")[0];
+refs.saleDate.value = today;
+refs.ingredientDate.value = today;
+
+const state = { products: [], sales: [], ingredients: [] };
+let db;
 let profitChart;
 let topProductsChart;
 
 init();
 
-function init() {
-  const today = new Date().toISOString().split("T")[0];
-  refs.saleDate.value = today;
-  refs.ingredientDate.value = today;
+async function init() {
+  db = createDataProvider();
 
   refs.productForm.addEventListener("submit", handleCreateProduct);
   refs.ingredientForm.addEventListener("submit", handleCreateIngredient);
   refs.saleForm.addEventListener("submit", handleCreateSale);
+  refs.quickSaleList.addEventListener("click", handleQuickSale);
 
-  renderAll();
+  await reloadData();
 }
 
-function handleCreateProduct(event) {
-  event.preventDefault();
+function createDataProvider() {
+  if (SUPABASE_URL && SUPABASE_ANON_KEY) {
+    refs.syncStatus.textContent = "Sincronizado com banco online (Supabase).";
+    const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    return createSupabaseProvider(client);
+  }
 
-  const product = {
-    id: crypto.randomUUID(),
+  refs.syncStatus.textContent = "Modo fallback local (configure Supabase para sincronizar PC + celular).";
+  return createLocalProvider();
+}
+
+function createSupabaseProvider(client) {
+  return {
+    async getAll() {
+      const [{ data: products }, { data: sales }, { data: ingredients }] = await Promise.all([
+        client.from("products").select("*").order("name"),
+        client.from("sales").select("*").order("date", { ascending: false }),
+        client.from("ingredients").select("*").order("date", { ascending: false }),
+      ]);
+      return { products: products ?? [], sales: sales ?? [], ingredients: ingredients ?? [] };
+    },
+    async addProduct(payload) { await client.from("products").insert(payload); },
+    async addIngredient(payload) { await client.from("ingredients").insert(payload); },
+    async registerSale({ product, quantity, date }) {
+      const newStock = product.stock - quantity;
+      if (newStock < 0) throw new Error("Estoque insuficiente");
+
+      await client.from("sales").insert({
+        product_id: product.id,
+        quantity,
+        unit_price: product.price,
+        total: product.price * quantity,
+        date,
+      });
+      await client.from("products").update({ stock: newStock }).eq("id", product.id);
+    },
+  };
+}
+
+function createLocalProvider() {
+  const seed = {
+    products: [
+      { id: crypto.randomUUID(), name: "Cookie Tradicional", type: "Cookie", flavor: "Chocolate", price: 8, stock: 30 },
+      { id: crypto.randomUUID(), name: "Biscoito Manteiga", type: "Biscoito", flavor: "Baunilha", price: 5, stock: 45 },
+    ],
+    sales: [],
+    ingredients: [],
+  };
+
+  const load = () => JSON.parse(localStorage.getItem(STORAGE_KEY) || "null") || structuredClone(seed);
+  const save = (next) => localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+
+  return {
+    async getAll() { return load(); },
+    async addProduct(payload) {
+      const data = load();
+      data.products.push({ id: crypto.randomUUID(), ...payload });
+      save(data);
+    },
+    async addIngredient(payload) {
+      const data = load();
+      data.ingredients.push({ id: crypto.randomUUID(), ...payload });
+      save(data);
+    },
+    async registerSale({ product, quantity, date }) {
+      const data = load();
+      const found = data.products.find((item) => item.id === product.id);
+      if (!found || found.stock < quantity) throw new Error("Estoque insuficiente");
+      found.stock -= quantity;
+      data.sales.push({
+        id: crypto.randomUUID(),
+        product_id: found.id,
+        quantity,
+        unit_price: found.price,
+        total: found.price * quantity,
+        date,
+      });
+      save(data);
+    },
+  };
+}
+
+async function handleCreateProduct(event) {
+  event.preventDefault();
+  await db.addProduct({
     name: document.getElementById("productName").value.trim(),
     type: document.getElementById("productType").value,
     flavor: document.getElementById("productFlavor").value.trim(),
     price: Number(document.getElementById("productPrice").value),
     stock: Number(document.getElementById("productStock").value),
-  };
-
-  state.products.push(product);
-  saveState();
-  renderAll();
+  });
   event.target.reset();
+  await reloadData();
 }
 
-function handleCreateIngredient(event) {
+async function handleCreateIngredient(event) {
   event.preventDefault();
-
-  state.ingredients.push({
-    id: crypto.randomUUID(),
+  await db.addIngredient({
     name: document.getElementById("ingredientName").value.trim(),
     cost: Number(document.getElementById("ingredientCost").value),
     quantity: document.getElementById("ingredientQty").value.trim(),
     date: document.getElementById("ingredientDate").value,
   });
-
-  saveState();
-  renderAll();
   event.target.reset();
-  refs.ingredientDate.value = new Date().toISOString().split("T")[0];
+  refs.ingredientDate.value = today;
+  await reloadData();
 }
 
-function handleCreateSale(event) {
+async function handleCreateSale(event) {
   event.preventDefault();
   const productId = refs.saleProduct.value;
   const quantity = Number(document.getElementById("saleQuantity").value);
-  const date = refs.saleDate.value;
-
-  const product = state.products.find((item) => item.id === productId);
-
-  if (!product || quantity <= 0) {
-    return;
-  }
-
-  if (product.stock < quantity) {
-    alert("Estoque insuficiente para esta venda.");
-    return;
-  }
-
-  product.stock -= quantity;
-
-  state.sales.push({
-    id: crypto.randomUUID(),
-    productId,
-    quantity,
-    unitPrice: product.price,
-    total: product.price * quantity,
-    date,
-  });
-
-  saveState();
-  renderAll();
+  await registerSale(productId, quantity);
   event.target.reset();
-  refs.saleDate.value = new Date().toISOString().split("T")[0];
+  refs.saleDate.value = today;
+}
+
+async function handleQuickSale(event) {
+  const button = event.target.closest("button[data-product-id]");
+  if (!button) return;
+  await registerSale(button.dataset.productId, 1);
+}
+
+async function registerSale(productId, quantity) {
+  const product = state.products.find((item) => item.id === productId);
+  if (!product || quantity <= 0) return;
+
+  try {
+    await db.registerSale({ product, quantity, date: refs.saleDate.value || today });
+    await reloadData();
+  } catch (error) {
+    alert(error.message || "Não foi possível registrar a venda.");
+  }
+}
+
+async function reloadData() {
+  const data = await db.getAll();
+  state.products = data.products;
+  state.sales = data.sales;
+  state.ingredients = data.ingredients;
+  renderAll();
 }
 
 function renderAll() {
   renderProductOptions();
+  renderQuickSale();
   renderProductTable();
   renderSummary();
   renderCharts();
@@ -134,15 +195,6 @@ function renderAll() {
 
 function renderProductOptions() {
   refs.saleProduct.innerHTML = "";
-
-  if (!state.products.length) {
-    const option = document.createElement("option");
-    option.textContent = "Cadastre um produto primeiro";
-    option.value = "";
-    refs.saleProduct.appendChild(option);
-    return;
-  }
-
   state.products.forEach((product) => {
     const option = document.createElement("option");
     option.value = product.id;
@@ -151,34 +203,39 @@ function renderProductOptions() {
   });
 }
 
+function renderQuickSale() {
+  refs.quickSaleList.innerHTML = "";
+  state.products.forEach((product) => {
+    const item = document.createElement("div");
+    item.className = "quick-item";
+    item.innerHTML = `
+      <div>
+        <strong>${product.name}</strong><br />
+        <small>Estoque: ${product.stock}</small>
+      </div>
+      <button type="button" data-product-id="${product.id}" ${product.stock <= 0 ? "disabled" : ""}>+1 venda</button>
+    `;
+    refs.quickSaleList.appendChild(item);
+  });
+}
+
 function renderProductTable() {
   refs.productTableBody.innerHTML = "";
-
   state.products.forEach((product) => {
+    const lowStockClass = product.stock <= LOW_STOCK_LIMIT ? "stock-low" : "";
     const row = document.createElement("tr");
-    const lowStockClass = product.stock <= 5 ? "stock-low" : "";
-
-    row.innerHTML = `
-      <td>${product.name}</td>
-      <td>${product.type}</td>
-      <td>${product.flavor}</td>
-      <td>${toCurrency(product.price)}</td>
-      <td class="${lowStockClass}">${product.stock}</td>
-    `;
-
+    row.innerHTML = `<td>${product.name}</td><td>${product.type}</td><td>${product.flavor}</td><td>${toCurrency(product.price)}</td><td class="${lowStockClass}">${product.stock}</td>`;
     refs.productTableBody.appendChild(row);
   });
 }
 
 function renderSummary() {
-  const totalRevenue = state.sales.reduce((acc, sale) => acc + sale.total, 0);
-  const totalCost = state.ingredients.reduce((acc, item) => acc + item.cost, 0);
-  const totalProfit = totalRevenue - totalCost;
-  const lowStockCount = state.products.filter((p) => p.stock <= 5).length;
-
+  const totalRevenue = state.sales.reduce((acc, sale) => acc + Number(sale.total || 0), 0);
+  const totalCost = state.ingredients.reduce((acc, item) => acc + Number(item.cost || 0), 0);
+  const lowStockCount = state.products.filter((p) => p.stock <= LOW_STOCK_LIMIT).length;
   refs.totalRevenue.textContent = toCurrency(totalRevenue);
   refs.totalCost.textContent = toCurrency(totalCost);
-  refs.totalProfit.textContent = toCurrency(totalProfit);
+  refs.totalProfit.textContent = toCurrency(totalRevenue - totalCost);
   refs.lowStockCount.textContent = `${lowStockCount} itens`;
 }
 
@@ -186,60 +243,29 @@ function renderCharts() {
   const monthly = getMonthlyData();
   const bestSellers = getBestSellers();
 
-  if (profitChart) {
-    profitChart.destroy();
-  }
-  if (topProductsChart) {
-    topProductsChart.destroy();
-  }
+  if (profitChart) profitChart.destroy();
+  if (topProductsChart) topProductsChart.destroy();
 
   profitChart = new Chart(document.getElementById("profitChart"), {
     type: "bar",
     data: {
       labels: monthly.labels,
       datasets: [
-        {
-          label: "Receita",
-          data: monthly.revenue,
-          backgroundColor: "rgba(91, 60, 196, 0.7)",
-        },
-        {
-          label: "Gasto",
-          data: monthly.cost,
-          backgroundColor: "rgba(245, 158, 11, 0.7)",
-        },
-        {
-          label: "Lucro",
-          data: monthly.profit,
-          type: "line",
-          borderColor: "rgba(22, 163, 74, 1)",
-          backgroundColor: "rgba(22, 163, 74, 0.2)",
-          tension: 0.3,
-        },
+        { label: "Receita", data: monthly.revenue, backgroundColor: "rgba(91, 60, 196, 0.7)" },
+        { label: "Gasto", data: monthly.cost, backgroundColor: "rgba(245, 158, 11, 0.7)" },
+        { label: "Lucro", data: monthly.profit, type: "line", borderColor: "#16a34a", tension: 0.3 },
       ],
     },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-    },
+    options: { responsive: true, maintainAspectRatio: false },
   });
 
   topProductsChart = new Chart(document.getElementById("topProductsChart"), {
     type: "doughnut",
     data: {
       labels: bestSellers.labels,
-      datasets: [
-        {
-          label: "Vendas",
-          data: bestSellers.data,
-          backgroundColor: ["#5b3cc4", "#f59e0b", "#16a34a", "#0891b2", "#d946ef"],
-        },
-      ],
+      datasets: [{ data: bestSellers.data, backgroundColor: ["#5b3cc4", "#f59e0b", "#16a34a", "#0891b2", "#d946ef"] }],
     },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-    },
+    options: { responsive: true, maintainAspectRatio: false },
   });
 
   document.getElementById("profitChart").style.minHeight = "300px";
@@ -248,86 +274,31 @@ function renderCharts() {
 
 function getMonthlyData() {
   const keys = new Set();
-
-  state.sales.forEach((sale) => keys.add(sale.date.slice(0, 7)));
-  state.ingredients.forEach((item) => keys.add(item.date.slice(0, 7)));
-
-  if (keys.size === 0) {
-    const current = new Date().toISOString().slice(0, 7);
-    keys.add(current);
-  }
+  state.sales.forEach((sale) => keys.add(String(sale.date).slice(0, 7)));
+  state.ingredients.forEach((item) => keys.add(String(item.date).slice(0, 7)));
+  if (keys.size === 0) keys.add(new Date().toISOString().slice(0, 7));
 
   const labels = Array.from(keys).sort();
-
-  const revenue = labels.map((month) =>
-    state.sales
-      .filter((sale) => sale.date.startsWith(month))
-      .reduce((acc, sale) => acc + sale.total, 0)
-  );
-
-  const cost = labels.map((month) =>
-    state.ingredients
-      .filter((item) => item.date.startsWith(month))
-      .reduce((acc, item) => acc + item.cost, 0)
-  );
-
+  const revenue = labels.map((month) => state.sales.filter((s) => String(s.date).startsWith(month)).reduce((acc, s) => acc + Number(s.total || 0), 0));
+  const cost = labels.map((month) => state.ingredients.filter((i) => String(i.date).startsWith(month)).reduce((acc, i) => acc + Number(i.cost || 0), 0));
   const profit = labels.map((_, index) => revenue[index] - cost[index]);
-
-  return {
-    labels,
-    revenue,
-    cost,
-    profit,
-  };
+  return { labels, revenue, cost, profit };
 }
 
 function getBestSellers() {
   const soldByProduct = new Map();
-
   state.sales.forEach((sale) => {
-    soldByProduct.set(sale.productId, (soldByProduct.get(sale.productId) || 0) + sale.quantity);
+    soldByProduct.set(sale.product_id, (soldByProduct.get(sale.product_id) || 0) + Number(sale.quantity || 0));
   });
 
   const ranking = state.products
-    .map((product) => ({
-      name: product.name,
-      sold: soldByProduct.get(product.id) || 0,
-    }))
+    .map((product) => ({ name: product.name, sold: soldByProduct.get(product.id) || 0 }))
     .sort((a, b) => b.sold - a.sold)
     .slice(0, 5);
 
-  return {
-    labels: ranking.map((item) => item.name),
-    data: ranking.map((item) => item.sold),
-  };
+  return { labels: ranking.map((i) => i.name), data: ranking.map((i) => i.sold) };
 }
 
 function toCurrency(value) {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  }).format(value);
-}
-
-function loadState() {
-  const saved = localStorage.getItem(STORAGE_KEY);
-
-  if (!saved) {
-    return structuredClone(seedData);
-  }
-
-  try {
-    const parsed = JSON.parse(saved);
-    return {
-      products: parsed.products ?? [],
-      sales: parsed.sales ?? [],
-      ingredients: parsed.ingredients ?? [],
-    };
-  } catch {
-    return structuredClone(seedData);
-  }
-}
-
-function saveState() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
 }
