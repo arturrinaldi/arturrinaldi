@@ -22,6 +22,11 @@ main { width: min(1200px, 95%); margin: 0 auto 2rem; display: grid; gap: 1rem; }
 .grid { display: grid; gap: 1rem; }
 .two-cols { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
 .form-grid { display: grid; gap: .65rem; }
+
+.two-inline { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+.button-row { display: flex; gap: .5rem; flex-wrap: wrap; }
+.secondary-btn { background: #334155; }
+
 .form-grid label { display: grid; gap: .25rem; font-size: .9rem; }
 input, select, button { border-radius: 10px; border: 1px solid #d8d8e2; padding: .8rem .75rem; font-size: 1rem; }
 button { background: var(--primary); color: white; border: 0; font-weight: 700; cursor: pointer; }

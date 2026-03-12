@@ -20,6 +20,20 @@
         <span id="syncStatus">Conectando ao banco...</span>
       </section>
 
+
+      <section class="panel">
+        <h2>Configuração Supabase (salva no navegador)</h2>
+        <form id="configForm" class="form-grid two-inline">
+          <label>Supabase URL<input type="url" id="configSupabaseUrl" placeholder="https://xxxx.supabase.co" /></label>
+          <label>Supabase Anon Key<input type="text" id="configSupabaseAnonKey" placeholder="sua chave anon" /></label>
+          <div class="button-row">
+            <button type="submit">Salvar configuração</button>
+            <button type="button" id="clearConfigBtn" class="secondary-btn">Limpar</button>
+          </div>
+        </form>
+        <p class="hint">Você configura uma vez e não precisa editar <code>app.js</code> de novo.</p>
+      </section>
+
       <section class="cards" aria-label="Resumo financeiro">
         <article class="card"><h2>Receita total</h2><strong id="totalRevenue">R$ 0,00</strong></article>
         <article class="card"><h2>Gasto com ingredientes</h2><strong id="totalCost">R$ 0,00</strong></article>
@@ -88,7 +102,7 @@
     </main>
 
     <footer>
-      <small>Para usar em vários dispositivos, configure Supabase em <code>app.js</code>.</small>
+      <small>Dica: conecte o GitHub à Vercel para deploy automático a cada push.</small>
     </footer>
 
     <script src="app.js"></script>

@@ -10,6 +10,7 @@ Agora o projeto suporta **banco online com Supabase**, para você registrar vend
 - Cards de receita, gasto, lucro e itens com estoque baixo.
 - Gráficos de lucro/gasto mensal e produtos mais vendidos.
 - Excluir produtos de teste (permitido apenas para itens sem vendas).
+- Configurar Supabase direto na tela (salvo no navegador), sem editar `app.js` em toda alteração.
 
 ## Rodar localmente
 
@@ -55,17 +56,18 @@ create table if not exists sales (
 );
 ```
 
-3. Em `app.js`, preencha:
-   - `SUPABASE_URL`
-   - `SUPABASE_ANON_KEY`
-4. No Supabase, habilite RLS e crie políticas de acesso para seu uso privado (ou deixe sem RLS enquanto estiver em ambiente de testes).
+3. Abra o app e preencha na seção **Configuração Supabase**:
+   - Supabase URL
+   - Supabase Anon Key
+4. Clique em **Salvar configuração**.
 
-> Sem configurar Supabase, o sistema entra em fallback local para demonstração.
+> Essa configuração fica salva no navegador. Você não precisa mais editar `app.js` sempre.
 
-## Deploy na Vercel
+## Deploy na Vercel (sem update manual)
 
+- Conecte o repositório GitHub na Vercel.
 - Framework preset: **Other**
 - Build command: vazio
 - Output directory: `/`
 
-Depois de deployado, use a mesma URL no PC e no celular para operar o mesmo banco online.
+Depois disso, cada `git push` na branch configurada dispara deploy automático na Vercel.

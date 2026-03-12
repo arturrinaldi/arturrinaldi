@@ -1,11 +1,16 @@
-const SUPABASE_URL = "";
-const SUPABASE_ANON_KEY = "";
+const DEFAULT_SUPABASE_URL = "";
+const DEFAULT_SUPABASE_ANON_KEY = "";
 
 const STORAGE_KEY = "cookieManagerDataFallback";
+const SUPABASE_CONFIG_KEY = "supabaseConfig";
 const LOW_STOCK_LIMIT = 5;
 
 const refs = {
   syncStatus: document.getElementById("syncStatus"),
+  configForm: document.getElementById("configForm"),
+  configUrl: document.getElementById("configSupabaseUrl"),
+  configKey: document.getElementById("configSupabaseAnonKey"),
+  clearConfigBtn: document.getElementById("clearConfigBtn"),
   productForm: document.getElementById("productForm"),
   ingredientForm: document.getElementById("ingredientForm"),
   saleForm: document.getElementById("saleForm"),
@@ -32,24 +37,70 @@ let topProductsChart;
 init();
 
 async function init() {
+  hydrateConfigForm();
   db = createDataProvider();
+
+  refs.configForm.addEventListener("submit", handleSaveConfig);
+  refs.clearConfigBtn.addEventListener("click", handleClearConfig);
   refs.productForm.addEventListener("submit", handleCreateProduct);
   refs.ingredientForm.addEventListener("submit", handleCreateIngredient);
   refs.saleForm.addEventListener("submit", handleCreateSale);
   refs.quickSaleList.addEventListener("click", handleQuickSale);
   refs.productTableBody.addEventListener("click", handleTableActions);
+
   await reloadData();
 }
 
+function hydrateConfigForm() {
+  const config = getSupabaseConfig();
+  refs.configUrl.value = config.url;
+  refs.configKey.value = config.anonKey;
+}
+
+function getSupabaseConfig() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(SUPABASE_CONFIG_KEY) || "null");
+    return {
+      url: saved?.url || DEFAULT_SUPABASE_URL,
+      anonKey: saved?.anonKey || DEFAULT_SUPABASE_ANON_KEY,
+    };
+  } catch {
+    return { url: DEFAULT_SUPABASE_URL, anonKey: DEFAULT_SUPABASE_ANON_KEY };
+  }
+}
+
 function createDataProvider() {
-  if (SUPABASE_URL && SUPABASE_ANON_KEY) {
+  const config = getSupabaseConfig();
+
+  if (config.url && config.anonKey) {
     refs.syncStatus.textContent = "Sincronizado com banco online (Supabase).";
-    const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const client = window.supabase.createClient(config.url, config.anonKey);
     return createSupabaseProvider(client);
   }
 
-  refs.syncStatus.textContent = "Modo fallback local (configure Supabase para sincronizar PC + celular).";
+  refs.syncStatus.textContent = "Modo fallback local (sem Supabase configurado).";
   return createLocalProvider();
+}
+
+async function handleSaveConfig(event) {
+  event.preventDefault();
+
+  const url = refs.configUrl.value.trim();
+  const anonKey = refs.configKey.value.trim();
+
+  localStorage.setItem(SUPABASE_CONFIG_KEY, JSON.stringify({ url, anonKey }));
+  db = createDataProvider();
+  await reloadData();
+  alert("Configuração salva. A sincronização foi atualizada.");
+}
+
+async function handleClearConfig() {
+  localStorage.removeItem(SUPABASE_CONFIG_KEY);
+  refs.configUrl.value = "";
+  refs.configKey.value = "";
+  db = createDataProvider();
+  await reloadData();
+  alert("Configuração removida. App voltou para modo local.");
 }
 
 function createSupabaseProvider(client) {
@@ -87,16 +138,9 @@ function createSupabaseProvider(client) {
       if (productError) throw new Error(productError.message);
     },
     async deleteProduct(productId) {
-      const { data: existingSales, error: checkError } = await client
-        .from("sales")
-        .select("id")
-        .eq("product_id", productId)
-        .limit(1);
-
+      const { data: existingSales, error: checkError } = await client.from("sales").select("id").eq("product_id", productId).limit(1);
       if (checkError) throw new Error(checkError.message);
-      if ((existingSales ?? []).length > 0) {
-        throw new Error("Este produto já possui vendas e não pode ser excluído.");
-      }
+      if ((existingSales ?? []).length > 0) throw new Error("Este produto já possui vendas e não pode ser excluído.");
 
       const { error } = await client.from("products").delete().eq("id", productId);
       if (error) throw new Error(error.message);
@@ -118,9 +162,7 @@ function createLocalProvider() {
   const save = (next) => localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
 
   return {
-    async getAll() {
-      return load();
-    },
+    async getAll() { return load(); },
     async addProduct(payload) {
       const data = load();
       data.products.push({ id: crypto.randomUUID(), ...payload });
@@ -135,25 +177,13 @@ function createLocalProvider() {
       const data = load();
       const found = data.products.find((item) => item.id === product.id);
       if (!found || found.stock < quantity) throw new Error("Estoque insuficiente");
-
       found.stock -= quantity;
-      data.sales.push({
-        id: crypto.randomUUID(),
-        product_id: found.id,
-        quantity,
-        unit_price: found.price,
-        total: found.price * quantity,
-        date,
-      });
+      data.sales.push({ id: crypto.randomUUID(), product_id: found.id, quantity, unit_price: found.price, total: found.price * quantity, date });
       save(data);
     },
     async deleteProduct(productId) {
       const data = load();
-      const hasSales = data.sales.some((sale) => sale.product_id === productId);
-      if (hasSales) {
-        throw new Error("Este produto já possui vendas e não pode ser excluído.");
-      }
-
+      if (data.sales.some((sale) => sale.product_id === productId)) throw new Error("Este produto já possui vendas e não pode ser excluído.");
       data.products = data.products.filter((product) => product.id !== productId);
       save(data);
     },
@@ -216,9 +246,7 @@ async function handleTableActions(event) {
   const productId = button.dataset.deleteProduct;
   const product = state.products.find((item) => item.id === productId);
   if (!product) return;
-
-  const confirmed = window.confirm(`Deseja excluir o produto "${product.name}"?`);
-  if (!confirmed) return;
+  if (!window.confirm(`Deseja excluir o produto "${product.name}"?`)) return;
 
   try {
     await db.deleteProduct(productId);
