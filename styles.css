@@ -1,0 +1,40 @@
+:root {
+  --bg: #f7f7fb;
+  --panel: #ffffff;
+  --text: #2b2b34;
+  --muted: #6f6f7c;
+  --primary: #5b3cc4;
+  --accent: #f59e0b;
+  --danger: #dc2626;
+  --border: #ececf4;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: Inter, system-ui, sans-serif; background: var(--bg); color: var(--text); }
+header, footer { padding: 1rem 1.25rem; text-align: center; }
+main { width: min(1200px, 95%); margin: 0 auto 2rem; display: grid; gap: 1rem; }
+.notice { background: #eef3ff; border: 1px solid #d9e4ff; border-radius: 10px; padding: .75rem 1rem; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: .75rem; }
+.card, .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 1rem; }
+.card h2, .panel h2 { margin: 0 0 .5rem; font-size: 1rem; }
+.card strong { font-size: 1.35rem; }
+.card.highlight { border-color: var(--accent); }
+.grid { display: grid; gap: 1rem; }
+.two-cols { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+.form-grid { display: grid; gap: .65rem; }
+.form-grid label { display: grid; gap: .25rem; font-size: .9rem; }
+input, select, button { border-radius: 10px; border: 1px solid #d8d8e2; padding: .8rem .75rem; font-size: 1rem; }
+button { background: var(--primary); color: white; border: 0; font-weight: 700; cursor: pointer; }
+button:hover { filter: brightness(1.05); }
+.table-wrap { overflow: auto; }
+table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+th, td { border-bottom: 1px solid var(--border); padding: .5rem; text-align: left; }
+.stock-low { color: var(--danger); font-weight: 700; }
+.charts { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+.quick-sale-list { margin-top: .8rem; display: grid; gap: .5rem; max-height: 280px; overflow: auto; }
+.quick-item { border: 1px solid var(--border); border-radius: 10px; padding: .55rem; display: flex; align-items: center; justify-content: space-between; gap: .4rem; }
+.quick-item button { padding: .6rem .75rem; min-width: 92px; }
+.hint { color: var(--muted); font-size: .9rem; }
+@media (max-width: 700px) {
+  .mobile-priority { order: -1; border: 2px solid #dcd1ff; }
+  button { min-height: 44px; }
+}
