@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gestão de Cookies e Biscoitos</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  </head>
+  <body>
+    <header>
+      <h1>🍪 Gestão de Cookies e Biscoitos</h1>
+      <p>Controle de vendas, estoque, gastos e lucro para uso no PC e celular.</p>
+    </header>
+
+    <main>
+      <section class="cards" aria-label="Resumo financeiro">
+        <article class="card">
+          <h2>Receita total</h2>
+          <strong id="totalRevenue">R$ 0,00</strong>
+        </article>
+        <article class="card">
+          <h2>Gasto com ingredientes</h2>
+          <strong id="totalCost">R$ 0,00</strong>
+        </article>
+        <article class="card highlight">
+          <h2>Lucro estimado</h2>
+          <strong id="totalProfit">R$ 0,00</strong>
+        </article>
+        <article class="card">
+          <h2>Estoque baixo</h2>
+          <strong id="lowStockCount">0 itens</strong>
+        </article>
+      </section>
+
+      <section class="grid two-cols">
+        <article class="panel">
+          <h2>Adicionar produto</h2>
+          <form id="productForm" class="form-grid">
+            <label>
+              Nome
+              <input type="text" id="productName" required placeholder="Ex.: Cookie de chocolate" />
+            </label>
+            <label>
+              Tipo
+              <select id="productType" required>
+                <option value="Cookie">Cookie</option>
+                <option value="Biscoito">Biscoito</option>
+              </select>
+            </label>
+            <label>
+              Sabor
+              <input type="text" id="productFlavor" required placeholder="Ex.: Chocolate branco" />
+            </label>
+            <label>
+              Preço de venda (R$)
+              <input type="number" id="productPrice" min="0" step="0.01" required />
+            </label>
+            <label>
+              Estoque inicial
+              <input type="number" id="productStock" min="0" step="1" required />
+            </label>
+            <button type="submit">Salvar produto</button>
+          </form>
+        </article>
+
+        <article class="panel mobile-priority">
+          <h2>Registrar venda rápida</h2>
+          <form id="saleForm" class="form-grid compact">
+            <label>
+              Produto
+              <select id="saleProduct" required></select>
+            </label>
+            <label>
+              Quantidade
+              <input type="number" id="saleQuantity" min="1" step="1" value="1" required />
+            </label>
+            <label>
+              Data da venda
+              <input type="date" id="saleDate" required />
+            </label>
+            <button type="submit">Dar baixa no estoque</button>
+          </form>
+          <p class="hint">Use esta área no celular durante as vendas.</p>
+        </article>
+      </section>
+
+      <section class="grid two-cols">
+        <article class="panel">
+          <h2>Compra de ingredientes</h2>
+          <form id="ingredientForm" class="form-grid">
+            <label>
+              Ingrediente
+              <input type="text" id="ingredientName" required placeholder="Ex.: Farinha de trigo" />
+            </label>
+            <label>
+              Valor pago (R$)
+              <input type="number" id="ingredientCost" min="0" step="0.01" required />
+            </label>
+            <label>
+              Quantidade
+              <input type="text" id="ingredientQty" required placeholder="Ex.: 5kg" />
+            </label>
+            <label>
+              Data da compra
+              <input type="date" id="ingredientDate" required />
+            </label>
+            <button type="submit">Registrar compra</button>
+          </form>
+        </article>
+
+        <article class="panel">
+          <h2>Estoque atual</h2>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Produto</th>
+                  <th>Tipo</th>
+                  <th>Sabor</th>
+                  <th>Preço</th>
+                  <th>Estoque</th>
+                </tr>
+              </thead>
+              <tbody id="productTableBody"></tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+
+      <section class="grid charts">
+        <article class="panel">
+          <h2>Lucro x Gasto mensal</h2>
+          <canvas id="profitChart"></canvas>
+        </article>
+        <article class="panel">
+          <h2>Mais vendidos</h2>
+          <canvas id="topProductsChart"></canvas>
+        </article>
+      </section>
+    </main>
+
+    <footer>
+      <small>Dados salvos localmente no seu navegador (localStorage).</small>
+    </footer>
+
+    <script src="app.js"></script>
+  </body>
+</html>

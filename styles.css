@@ -1,0 +1,150 @@
+:root {
+  --bg: #f7f7fb;
+  --panel: #ffffff;
+  --text: #2b2b34;
+  --muted: #6f6f7c;
+  --primary: #5b3cc4;
+  --accent: #f59e0b;
+  --danger: #dc2626;
+  --border: #ececf4;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+header,
+footer {
+  padding: 1rem 1.25rem;
+  text-align: center;
+}
+
+header h1 {
+  margin-bottom: 0.25rem;
+}
+
+header p,
+footer small,
+.hint {
+  color: var(--muted);
+}
+
+main {
+  width: min(1200px, 95%);
+  margin: 0 auto 2rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.75rem;
+}
+
+.card,
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1rem;
+}
+
+.card h2,
+.panel h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+}
+
+.card strong {
+  font-size: 1.35rem;
+}
+
+.card.highlight {
+  border-color: var(--accent);
+}
+
+.grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.two-cols {
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.form-grid {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.form-grid label {
+  display: grid;
+  gap: 0.25rem;
+  font-size: 0.9rem;
+}
+
+input,
+select,
+button {
+  border-radius: 8px;
+  border: 1px solid #d8d8e2;
+  padding: 0.65rem 0.7rem;
+  font-size: 0.95rem;
+}
+
+button {
+  background: var(--primary);
+  color: white;
+  border: 0;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:hover {
+  filter: brightness(1.05);
+}
+
+.table-wrap {
+  overflow: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+th,
+td {
+  border-bottom: 1px solid var(--border);
+  padding: 0.5rem;
+  text-align: left;
+}
+
+.stock-low {
+  color: var(--danger);
+  font-weight: 700;
+}
+
+.charts {
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+
+@media (max-width: 700px) {
+  .mobile-priority {
+    order: -1;
+    border: 2px solid #dcd1ff;
+  }
+
+  .card strong {
+    font-size: 1.15rem;
+  }
+}
