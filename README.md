@@ -1,70 +1,60 @@
-# Gestão de Cookies e Biscoitos (PC + Celular)
+# LoveQuest RPG — Gamificação para Casais
 
-Agora o projeto suporta **banco online com Supabase**, para você registrar vendas no celular e enxergar no PC em tempo real.
+Aplicativo estilo RPG para transformar tarefas domésticas e atitudes de afeto em **quests** com XP, moedas e progressão de nível.
 
-## Funcionalidades
+## Stack (gratuita para testes)
 
-- Cadastro de produtos (cookie/biscoito, sabor, preço, estoque).
-- Baixa de estoque por venda individual e por **botão rápido `+1 venda`** no mobile.
-- Registro de compra de ingredientes para controle de gastos.
-- Cards de receita, gasto, lucro e itens com estoque baixo.
-- Gráficos de lucro/gasto mensal e produtos mais vendidos.
+- **Frontend mobile:** React Native + Expo (teste via Expo Go).
+- **Backend API:** FastAPI (Python), pronto para deploy no Render Free.
+- **Banco + Auth:** Supabase (PostgreSQL + Auth).
 
-## Rodar localmente
+> Este repositório já inclui um backend FastAPI funcional de referência e o schema SQL para Supabase.
+
+## Mecânicas implementadas
+
+- Tarefas viram quests com categoria, dificuldade e recompensa.
+- Fluxo de aprovação: quem conclui aguarda validação do parceiro para receber loot.
+- Level up progressivo com fórmula:
+
+```txt
+XP_proximo = 100 * (level^2)
+```
+
+- Atributos por categoria de quest:
+  - **Força**: limpeza pesada.
+  - **Destreza**: cozinha/reparos.
+  - **Carisma**: quests de afeto.
+- Daily quest automática de afeto.
+- Boss fight colaborativa com bônus de **+20% de XP** quando ambos participam.
+
+## Estrutura de pastas
+
+```txt
+backend/
+  main.py          # API FastAPI
+  models.py        # Regras de domínio (XP, level, validação, atributos)
+db/
+  schema.sql       # Schema PostgreSQL/Supabase
+```
+
+## Rodando backend local
 
 ```bash
-python3 -m http.server 4173
+python -m venv .venv
+source .venv/bin/activate
+pip install fastapi uvicorn
+uvicorn backend.main:app --reload
 ```
 
-Acesse: `http://localhost:4173`.
+Swagger: `http://127.0.0.1:8000/docs`
 
-## Configurar banco online (Supabase)
+## Próximos passos no frontend (Expo)
 
-1. Crie um projeto no Supabase.
-2. Rode este SQL no `SQL Editor`:
-
-```sql
-create table if not exists products (
-  id uuid primary key default gen_random_uuid(),
-  name text not null,
-  type text not null,
-  flavor text not null,
-  price numeric not null,
-  stock int not null default 0,
-  created_at timestamptz default now()
-);
-
-create table if not exists ingredients (
-  id uuid primary key default gen_random_uuid(),
-  name text not null,
-  cost numeric not null,
-  quantity text not null,
-  date date not null,
-  created_at timestamptz default now()
-);
-
-create table if not exists sales (
-  id uuid primary key default gen_random_uuid(),
-  product_id uuid references products(id) on delete cascade,
-  quantity int not null,
-  unit_price numeric not null,
-  total numeric not null,
-  date date not null,
-  created_at timestamptz default now()
-);
-```
-
-3. Em `app.js`, preencha:
-   - `SUPABASE_URL`
-   - `SUPABASE_ANON_KEY`
-4. No Supabase, habilite RLS e crie políticas de acesso para seu uso privado (ou deixe sem RLS enquanto estiver em ambiente de testes).
-
-> Sem configurar Supabase, o sistema entra em fallback local para demonstração.
-
-## Deploy na Vercel
-
-- Framework preset: **Other**
-- Build command: vazio
-- Output directory: `/`
-
-Depois de deployado, use a mesma URL no PC e no celular para operar o mesmo banco online.
+1. Criar app Expo com telas:
+   - Login/Cadastro
+   - Dashboard da Guilda (nível do casal lado a lado)
+   - Lista de Quests
+   - Loja de recompensas
+2. Consumir os endpoints em `backend/main.py`.
+3. Conectar autenticação no Supabase Auth.
+4. Deploy backend no Render (free) e apontar base URL no app Expo.
